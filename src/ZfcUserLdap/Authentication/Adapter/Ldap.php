@@ -50,6 +50,7 @@ class Ldap implements AdapterChain, ServiceManagerAwareInterface {
         $mapper = new \ZfcUserLdap\Mapper\User(
                 $this->getServiceManager()->get('ldap_interface'), $this->getServiceManager()->get('zfcuser_module_options')
         );
+        
         $this->setMapper($mapper);
         if ($this->isSatisfied()) {
             $storage = $this->getStorage()->read();
@@ -85,6 +86,8 @@ class Ldap implements AdapterChain, ServiceManagerAwareInterface {
         }
 
         if (!$userObject) {
+            echo 'No userobject!';
+            die;
             $e->setCode(AuthenticationResult::FAILURE_IDENTITY_NOT_FOUND)
                     ->setMessages(array('A record with the supplied identity could not be found.'));
             $this->setSatisfied(false);
@@ -92,6 +95,8 @@ class Ldap implements AdapterChain, ServiceManagerAwareInterface {
         }
 
         if ($this->getOptions()->getEnableUserState()) {
+            echo 'State is not allowed!';
+            die;
             // Don't allow user to login if state is not in allowed list
             if (!in_array($userObject->getState(), $this->getOptions()->getAllowedLoginStates())) {
                 $e->setCode(AuthenticationResult::FAILURE_UNCATEGORIZED)
@@ -100,7 +105,10 @@ class Ldap implements AdapterChain, ServiceManagerAwareInterface {
                 return false;
             }
         }
+
         if ($auth = $this->getMapper()->authenticate($userObject->getUsername(), $credential) !== TRUE) {
+            echo 'Password wrong!';
+            die;
             // Password does not match
             $e->setCode(AuthenticationResult::FAILURE_CREDENTIAL_INVALID)
                     ->setMessages(array($auth));

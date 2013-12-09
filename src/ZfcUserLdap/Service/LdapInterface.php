@@ -55,6 +55,7 @@ class LdapInterface {
          * if no active servers are available then we will use the error msg
          */
         foreach ($options as $server) {
+            
             try {
                 $this->ldap = new \Zend\Ldap\Ldap($server);
                 $this->ldap->bind();
@@ -72,9 +73,13 @@ class LdapInterface {
         } catch (\Exception $exc) {
             return $this->error;
         }
-        $entryDN = "uid=$username," . $this->active_server['baseDn'];
+
         try {
+            $entryDN = "uid=$username," . $this->active_server['baseDn'];
             $hm = $this->ldap->getEntry($entryDN);
+            if (!$hm) {
+                $hm = $this->ldap->search('(&(objectCategory=person)(anr=' . $username . '))')->getFirst();
+            }
             return $hm;
         } catch (LdapException $exc) {
             return $exc->getMessage();
@@ -120,7 +125,10 @@ class LdapInterface {
         }
     }
     
-    function authenticate($username, $password) {
+    function authenticate($username, $password, $tries = 0, $original = null) {
+        if ($original == null) {
+            $original = $username;
+        }
         try {
             $this->bind();
         } catch (\Exception $exc) {
@@ -135,8 +143,22 @@ class LdapInterface {
                 $this->log("$username logged in successfully!");
                 return TRUE;
             } else {
-                $messages = $result->getMessages();
-                return $messages;
+                switch ($tries) {
+                	case 0:
+                	    $hm = $this->ldap->search('(&(objectCategory=person)(anr=' . $original . '))')->getFirst();
+                	    $username = $hm['dn'];
+                	    $this->authenticate($username, $password, $tries+1, $original);
+                	    break;
+            	    case 1:
+            	    	$hm = $this->ldap->search('(&(objectCategory=person)(anr=' . $original . '))')->getFirst();
+            	    	$username = $hm['userprincipalname'][0];
+            	    	$this->authenticate($username, $password, $tries+1, $original);
+            	    	break;
+                	default:
+                	    $messages = $result->getMessages();
+                	    return $messages;
+                	    break;
+                }
             }
         } catch (LdapException $exc) {
             $msg = $exc->getMessage();
