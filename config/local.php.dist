@@ -1,0 +1,14 @@
+<?php
+return array(
+    'ldap' => array(
+        'domain_controllers'   => array (
+        		'dc01.example.com', //An array of domaincontrollers
+        ),
+        'account_suffix'       => '@ad.example.com', //The suffix of an account.
+        'admin_password'       => 'password', //The password of an account thats allowed to bind.
+        'admin_username'       => 'username', //The username thats allowed to bind.
+        'base_dn'              => 'DC=ad,DC=example,DC=com', //The base DN to bind to
+        'default_email_domain' => 'example.com', // The default e-mail domain used
+        'save_database'        => false, // Use a zfcuser_db_user_mapper to save the username to a database
+    ),
+);
