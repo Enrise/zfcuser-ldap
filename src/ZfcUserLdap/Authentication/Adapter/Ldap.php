@@ -45,16 +45,24 @@ class Ldap implements AdapterChain, ServiceManagerAwareInterface {
      * @var Storage\StorageInterface
      */
     protected $storage;
-    
+
+    /**
+     * Configuration
+     * @var array
+     */
+    protected $config;
+
     /**
      * Initiate our own UserMapper
      * @return \ZfcUserLdap\Mapper\User
      */
     private function createMapper() 
     {
-        $config = $this->getServiceManager()->get('Config');
+        $this->config = $this->getServiceManager()->get('Config');
         $mapper = new \ZfcUserLdap\Mapper\User(
-                $this->getServiceManager()->get('ldap_interface'), $this->getServiceManager()->get('zfcuser_module_options'), $config['ldap']
+            $this->getServiceManager()->get('ldap_interface'),
+            $this->getServiceManager()->get('zfcuser_module_options'),
+            $this->config['ldap']
         );
         
         $this->setMapper($mapper);
@@ -108,24 +116,25 @@ class Ldap implements AdapterChain, ServiceManagerAwareInterface {
         $userEntity = $userObject->getEntity();
         $e->setIdentity($userEntity);
         
-        $userDbMapper = $this->serviceManager->get('zfcuser_user_db_mapper');
-        
-
-        $fetchFromDb = $userDbMapper->findByUsername($userEntity->getUsername());
-        
-        if ($fetchFromDb === false) {
-            //This user has been logged in, but he's not yet in the database.
-            $userDbObject = $this->populateUserDbObject($userEntity);
-            $returnedEntity = $userDbMapper->insert($userDbObject, 'user');
-            $userEntity->setId($userDbObject->getId());
-        } else {
-            $userEntity->setId($fetchFromDb->getId());
+        if ($this->config['ldap']['save_database']) {
+            $userDbMapper = $this->serviceManager->get('zfcuser_user_db_mapper');
+    
+            $fetchFromDb = $userDbMapper->findByUsername($userEntity->getUsername());
+            
+            if ($fetchFromDb === false) {
+                //This user has been logged in, but he's not yet in the database.
+                $userDbObject = $this->populateUserDbObject($userEntity);
+                $returnedEntity = $userDbMapper->insert($userDbObject, 'user');
+                $userEntity->setId($userDbObject->getId());
+            } else {
+                $userEntity->setId($fetchFromDb->getId());
+            }
+    
+            $this                ->setSatisfied(true);
+            $storage             = $this->getStorage()->read();
+            $storage['identity'] = $e->getIdentity();
+            $this->getStorage()  ->write($storage);
         }
-
-        $this                ->setSatisfied(true);
-        $storage             = $this->getStorage()->read();
-        $storage['identity'] = $e->getIdentity();
-        $this->getStorage()  ->write($storage);
 
         $e->setCode(AuthenticationResult::SUCCESS)
           ->setMessages(array('Authentication successful.'));

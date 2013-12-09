@@ -33,6 +33,7 @@ The following steps are necessary to get this module working
         'admin_username'       => '', //Not neccesary
         'base_dn'              => 'DC=example,DC=com',
         'default_email_domain' => 'example.com', //Will be appended after username (inc. @-sign) as e-mail for database
+        'save_database'        => false, // Use a zfcuser_db_user_mapper to save the username to a database
     ),
       </pre>
       
